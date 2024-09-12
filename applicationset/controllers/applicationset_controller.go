@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -1287,13 +1288,22 @@ func (r *ApplicationSetReconciler) migrateStatus(ctx context.Context, appset *ar
 	return nil
 }
 
+func keys[T any](m map[string]T) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (r *ApplicationSetReconciler) updateResourcesStatus(ctx context.Context, logCtx *log.Entry, appset *argov1alpha1.ApplicationSet, apps []argov1alpha1.Application) error {
 	statusMap := status.GetResourceStatusMap(appset)
 	statusMap = status.BuildResourceStatus(statusMap, apps)
 
 	statuses := []argov1alpha1.ResourceStatus{}
-	for _, status := range statusMap {
-		statuses = append(statuses, status)
+	for _, key := range keys(statusMap) {
+		statuses = append(statuses, statusMap[key])
 	}
 	appset.Status.Resources = statuses
 	// DefaultRetry will retry 5 times with a backoff factor of 1, jitter of 0.1 and a duration of 10ms
